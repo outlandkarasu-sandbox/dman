@@ -1,6 +1,11 @@
 import std.stdio;
 
-void main()
-{
-	writeln("Edit source/app.d to start your project.");
+import dman.sdl :
+    loadSdl
+;
+
+/// メイン処理
+void main() {
+    writefln("loaded SDL2: %s", loadSdl());
 }
+
