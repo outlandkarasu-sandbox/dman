@@ -10,6 +10,8 @@ import dman.opengl :
 ;
 
 import bindbc.sdl :
+    SDL_GL_CreateContext,
+    SDL_GL_DeleteContext,
     SDL_INIT_VIDEO,
     SDL_Init,
     SDL_QUIT,
@@ -18,7 +20,9 @@ import bindbc.sdl :
     SDL_DestroyWindow,
     SDL_Event,
     SDL_PollEvent,
-    SDL_WINDOW_SHOWN ;
+    SDL_WINDOW_OPENGL,
+    SDL_WINDOW_SHOWN
+;
 
 /// ウィンドウタイトル
 enum TITLE = "D-man Viewer";
@@ -31,15 +35,14 @@ enum {
     WINDOW_HEIGHT = 320,
 }
 
+/// ウィンドウ設定。作成時に表示・OpenGL有効化。
+enum WINDOW_FLAGS = SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL;
+
 /// メイン処理
 void main() {
     // SDLのロード
     immutable sdlVersion = loadSdl();
     writefln("SDL loaded: %s", sdlVersion);
-
-    // OpenGLのロード
-    immutable openGlVersion = loadOpenGl();
-    writefln("OpenGL loaded: %s", openGlVersion);
 
     // 使用するサブシステムの初期化
     enforceSdl(SDL_Init(SDL_INIT_VIDEO));
@@ -52,8 +55,16 @@ void main() {
         WINDOW_POS_Y,
         WINDOW_WIDTH,
         WINDOW_HEIGHT,
-        SDL_WINDOW_SHOWN)); // 作成時に表示する。
+        WINDOW_FLAGS));
     scope(exit) SDL_DestroyWindow(window);
+
+    // OpenGLコンテキスト生成
+    auto openGlContext = enforceSdl(SDL_GL_CreateContext(window));
+    scope(exit) SDL_GL_DeleteContext(openGlContext);
+
+    // OpenGLのロード
+    immutable openGlVersion = loadOpenGl();
+    writefln("OpenGL loaded: %s", openGlVersion);
 
     // メインループ
     mainLoop: for(;;) {
