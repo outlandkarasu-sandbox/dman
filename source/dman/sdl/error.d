@@ -1,10 +1,9 @@
 module dman.sdl.error;
 
-import std.traits : isIntegral;
+import std.traits : isIntegral, isPointer;
 import std.string : fromStringz;
 
-import bindbc.sdl :
-    SDL_GetError;
+import bindbc.sdl : SDL_GetError;
 
 /**
  *  SDL関連エラー例外
@@ -34,8 +33,16 @@ class SdlException : Exception {
  *      戻り値がそのまま返る。
  *  Throws: SdlException 戻り値が0でない場合にスロー
  */
-T enforceSdl(T, string file = __FILE__, ulong line = __LINE__)(T value) if(isIntegral!T) {
-    if(value != 0) {
+T enforceSdl(T, string file = __FILE__, ulong line = __LINE__)(T value) {
+    static if(isIntegral!T) {
+        immutable hasError = (value != 0);
+    } else static if(isPointer!T) {
+        immutable hasError = (value is null);
+    } else {
+        static assert(false, "unsupported type. " ~ T.stringof);
+    }
+
+    if(hasError) {
         throw new SdlException(fromStringz(SDL_GetError()).idup, file, line);
     }
     return value;
