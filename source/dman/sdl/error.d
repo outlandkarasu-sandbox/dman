@@ -38,5 +38,6 @@ T enforceSdl(T, string file = __FILE__, ulong line = __LINE__)(T value) if(isInt
     if(value != 0) {
         throw new SdlException(fromStringz(SDL_GetError()).idup, file, line);
     }
+    return value;
 }
 
