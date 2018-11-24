@@ -1,0 +1,9 @@
+{
+	"name": "dman",
+	"authors": [
+		"outland.karasu@gmail.com"
+	],
+	"description": "A d-man viewer.",
+	"copyright": "Copyright © 2018, outland.karasu@gmail.com",
+	"license": "BSL-1.0"
+}
