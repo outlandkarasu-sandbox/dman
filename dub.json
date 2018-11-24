@@ -5,5 +5,8 @@
 	],
 	"description": "A d-man viewer.",
 	"copyright": "Copyright © 2018, outland.karasu@gmail.com",
-	"license": "BSL-1.0"
+	"license": "BSL-1.0",
+        "dependencies": {
+                "bindbc-sdl": "~>0.4.1"
+        }
 }
