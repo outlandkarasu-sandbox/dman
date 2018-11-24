@@ -12,6 +12,7 @@ import dman.opengl :
 import bindbc.sdl :
     SDL_GL_CreateContext,
     SDL_GL_DeleteContext,
+    SDL_GL_SwapWindow,
     SDL_INIT_VIDEO,
     SDL_Init,
     SDL_QUIT,
@@ -22,6 +23,12 @@ import bindbc.sdl :
     SDL_PollEvent,
     SDL_WINDOW_OPENGL,
     SDL_WINDOW_SHOWN
+;
+
+import bindbc.opengl :
+    GL_COLOR_BUFFER_BIT,
+    glClearColor,
+    glClear
 ;
 
 /// ウィンドウタイトル
@@ -65,6 +72,13 @@ void main() {
     // OpenGLのロード
     immutable openGlVersion = loadOpenGl();
     writefln("OpenGL loaded: %s", openGlVersion);
+
+    // 画面のクリア
+    glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    // 描画結果に差し替える。
+    SDL_GL_SwapWindow(window);
 
     // メインループ
     mainLoop: for(;;) {
