@@ -5,6 +5,10 @@ import dman.sdl :
     loadSdl
 ;
 
+import dman.opengl :
+    loadOpenGl
+;
+
 import bindbc.sdl :
     SDL_INIT_VIDEO,
     SDL_Init,
@@ -30,8 +34,12 @@ enum {
 /// メイン処理
 void main() {
     // SDLのロード
-    immutable loadedVersion = loadSdl();
-    writefln("SDL loaded: %s", loadedVersion);
+    immutable sdlVersion = loadSdl();
+    writefln("SDL loaded: %s", sdlVersion);
+
+    // OpenGLのロード
+    immutable openGlVersion = loadOpenGl();
+    writefln("OpenGL loaded: %s", openGlVersion);
 
     // 使用するサブシステムの初期化
     enforceSdl(SDL_Init(SDL_INIT_VIDEO));
