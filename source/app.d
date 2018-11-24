@@ -35,13 +35,13 @@ void main() {
     scope(exit) SDL_Quit();
 
     // メインウィンドウ生成
-    auto window = SDL_CreateWindow(
+    auto window = enforceSdl(SDL_CreateWindow(
         TITLE,
         WINDOW_POS_X,
         WINDOW_POS_Y,
         WINDOW_WIDTH,
         WINDOW_HEIGHT,
-        SDL_WINDOW_SHOWN); // 作成時に表示する。
+        SDL_WINDOW_SHOWN)); // 作成時に表示する。
     scope(exit) SDL_DestroyWindow(window);
 }
 
