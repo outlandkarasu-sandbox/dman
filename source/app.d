@@ -6,11 +6,14 @@ import dman.sdl :
 ;
 
 import bindbc.sdl :
-    SDL_Init,
     SDL_INIT_VIDEO,
+    SDL_Init,
+    SDL_QUIT,
     SDL_Quit,
     SDL_CreateWindow,
     SDL_DestroyWindow,
+    SDL_Event,
+    SDL_PollEvent,
     SDL_WINDOW_SHOWN ;
 
 /// ウィンドウタイトル
@@ -43,5 +46,18 @@ void main() {
         WINDOW_HEIGHT,
         SDL_WINDOW_SHOWN)); // 作成時に表示する。
     scope(exit) SDL_DestroyWindow(window);
+
+    // メインループ
+    mainLoop: for(;;) {
+        // イベントがキューにある限り処理を行う。           
+        for(SDL_Event e; SDL_PollEvent(&e);) {
+            switch(e.type) {
+            case SDL_QUIT:
+                break mainLoop;
+            default:
+                break;
+            }
+        }
+    }
 }
 
