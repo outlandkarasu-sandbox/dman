@@ -1,4 +1,4 @@
-module dman.sdl;
+module dman.sdl.error;
 
 import std.traits : isIntegral;
 import std.string : fromStringz;
