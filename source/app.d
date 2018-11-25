@@ -27,8 +27,12 @@ import bindbc.sdl :
 
 import bindbc.opengl :
     GL_COLOR_BUFFER_BIT,
+    glBindBuffer,
     glClearColor,
-    glClear
+    glClear,
+    glDeleteBuffers,
+    glGenBuffers,
+    GLuint
 ;
 
 /// ウィンドウタイトル
@@ -76,6 +80,11 @@ void main() {
     // 画面のクリア
     glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    // 頂点バッファの生成
+    GLuint verticesBuffer;
+    glGenBuffers(1, &verticesBuffer);
+    scope(exit) glDeleteBuffers(1, &verticesBuffer);
 
     // 描画結果に差し替える。
     SDL_GL_SwapWindow(window);
