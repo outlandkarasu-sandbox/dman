@@ -26,11 +26,15 @@ import bindbc.sdl :
 ;
 
 import bindbc.opengl :
+    GL_ARRAY_BUFFER,
     GL_COLOR_BUFFER_BIT,
+    GL_STATIC_DRAW,
     glBindBuffer,
+    glBufferData,
     glClearColor,
     glClear,
     glDeleteBuffers,
+    GLfloat,
     glGenBuffers,
     GLuint
 ;
@@ -85,6 +89,16 @@ void main() {
     GLuint verticesBuffer;
     glGenBuffers(1, &verticesBuffer);
     scope(exit) glDeleteBuffers(1, &verticesBuffer);
+
+    // 頂点データの設定
+    glBindBuffer(GL_ARRAY_BUFFER, verticesBuffer);
+    immutable(GLfloat)[] triangle = [
+         0.5f, -0.5f, 0.0f,
+        -0.5f, -0.5f, 0.0f,
+         0.0f,  0.5f, 0.0f,
+    ];
+    glBufferData(GL_ARRAY_BUFFER, triangle.length * GLfloat.sizeof, triangle.ptr, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     // 描画結果に差し替える。
     SDL_GL_SwapWindow(window);
