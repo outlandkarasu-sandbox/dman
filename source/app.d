@@ -28,15 +28,27 @@ import bindbc.sdl :
 import bindbc.opengl :
     GL_ARRAY_BUFFER,
     GL_COLOR_BUFFER_BIT,
+    GL_ELEMENT_ARRAY_BUFFER,
+    GL_FALSE,
+    GL_FLOAT,
     GL_STATIC_DRAW,
+    GL_TRIANGLES,
+    GL_UNSIGNED_INT,
     glBindBuffer,
     glBufferData,
     glClearColor,
     glClear,
     glDeleteBuffers,
+    glDisableVertexAttribArray,
+    glDrawElements,
+    glEnableVertexAttribArray,
     GLfloat,
+    glFlush,
     glGenBuffers,
-    GLuint
+    GLsizei,
+    GLuint,
+    glVertexAttribPointer,
+    GLvoid
 ;
 
 /// ウィンドウタイトル
@@ -93,12 +105,36 @@ void main() {
     // 頂点データの設定
     glBindBuffer(GL_ARRAY_BUFFER, verticesBuffer);
     immutable(GLfloat)[] triangle = [
-         0.5f, -0.5f, 0.0f,
-        -0.5f, -0.5f, 0.0f,
-         0.0f,  0.5f, 0.0f,
+        -1.0f, -1.0f, 0.0f,
+         1.0f, -1.0f, 0.0f,
+         0.0f,  1.0f, 0.0f,
     ];
     glBufferData(GL_ARRAY_BUFFER, triangle.length * GLfloat.sizeof, triangle.ptr, GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    // インデックスバッファの生成
+    GLuint indiciesBuffer;
+    glGenBuffers(1, &indiciesBuffer);
+    scope(exit) glDeleteBuffers(1, &indiciesBuffer);
+
+    // インデックスデータの設定
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indiciesBuffer);
+    immutable(GLuint)[] indicies = [0, 1, 2];
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indicies.length * GLuint.sizeof, indicies.ptr, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    // 頂点属性を設定する
+    glBindBuffer(GL_ARRAY_BUFFER, verticesBuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indiciesBuffer);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, cast(const(GLvoid)*) 0);
+    glDrawElements(GL_TRIANGLES, cast(GLsizei) indicies.length, GL_UNSIGNED_INT, cast(const(GLvoid)*) 0);
+    glDisableVertexAttribArray(0);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glFlush();
 
     // 描画結果に差し替える。
     SDL_GL_SwapWindow(window);
