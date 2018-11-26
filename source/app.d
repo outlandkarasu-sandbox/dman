@@ -1,17 +1,27 @@
 import std.stdio;
 
+import std.exception : assumeUnique;
+import std.string : fromStringz;
+
 import dman.sdl :
     enforceSdl,
     loadSdl
 ;
 
 import dman.opengl :
-    loadOpenGl
+    loadOpenGl,
+    OpenGlException
 ;
 
 import bindbc.sdl :
+    SDL_GL_CONTEXT_MAJOR_VERSION,
+    SDL_GL_CONTEXT_MINOR_VERSION,
+    SDL_GL_CONTEXT_PROFILE_CORE,
+    SDL_GL_CONTEXT_PROFILE_MASK,
     SDL_GL_CreateContext,
     SDL_GL_DeleteContext,
+    SDL_GL_DOUBLEBUFFER,
+    SDL_GL_SetAttribute,
     SDL_GL_SwapWindow,
     SDL_INIT_VIDEO,
     SDL_Init,
@@ -26,9 +36,59 @@ import bindbc.sdl :
 ;
 
 import bindbc.opengl :
+    GL_ARRAY_BUFFER,
     GL_COLOR_BUFFER_BIT,
+    GL_COMPILE_STATUS,
+    GL_DEPTH_BUFFER_BIT,
+    GL_ELEMENT_ARRAY_BUFFER,
+    GL_FALSE,
+    GL_FLOAT,
+    GL_FRAGMENT_SHADER,
+    GL_INFO_LOG_LENGTH,
+    GL_LINK_STATUS,
+    GL_STATIC_DRAW,
+    GL_TRIANGLES,
+    GL_UNSIGNED_INT,
+    GL_VERSION,
+    GL_VERTEX_SHADER,
+    glAttachShader,
+    glBindBuffer,
+    glBindVertexArray,
+    glBufferData,
+    GLchar,
     glClearColor,
-    glClear
+    glClear,
+    glCompileShader,
+    glCreateShader,
+    glCreateProgram,
+    glDeleteBuffers,
+    glDeleteProgram,
+    glDeleteShader,
+    glDeleteVertexArrays,
+    glDetachShader,
+    glDisableVertexAttribArray,
+    glDrawArrays,
+    glDrawElements,
+    glEnableVertexAttribArray,
+    GLenum,
+    GLfloat,
+    glFlush,
+    glGenBuffers,
+    glGenVertexArrays,
+    glGetProgramiv,
+    glGetProgramInfoLog,
+    glGetShaderiv,
+    glGetShaderInfoLog,
+    glGetString,
+    GLint,
+    glLinkProgram,
+    glShaderSource,
+    GLsizei,
+    glUseProgram,
+    GLuint,
+    glVertexAttribPointer,
+    glViewport,
+    GLvoid
 ;
 
 /// ウィンドウタイトル
@@ -45,6 +105,12 @@ enum {
 /// ウィンドウ設定。作成時に表示・OpenGL有効化。
 enum WINDOW_FLAGS = SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL;
 
+/// OpenGLバージョン
+enum {
+    OPEN_GL_MAJOR_VERSION = 3,
+    OPEN_GL_MINOR_VERSION = 3,
+}
+
 /// メイン処理
 void main() {
     // SDLのロード
@@ -54,6 +120,12 @@ void main() {
     // 使用するサブシステムの初期化
     enforceSdl(SDL_Init(SDL_INIT_VIDEO));
     scope(exit) SDL_Quit();
+
+    // OpenGLバージョン等設定
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, OPEN_GL_MAJOR_VERSION);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, OPEN_GL_MINOR_VERSION);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
     // メインウィンドウ生成
     auto window = enforceSdl(SDL_CreateWindow(
@@ -71,11 +143,58 @@ void main() {
 
     // OpenGLのロード
     immutable openGlVersion = loadOpenGl();
-    writefln("OpenGL loaded: %s", openGlVersion);
+    writefln("OpenGL loaded: %s(%s)",
+            openGlVersion,
+            (cast(const(char)*) glGetString(GL_VERSION)).fromStringz);
+
+    // ビューポートの設定
+    glViewport(0, 0, WINDOW_HEIGHT, WINDOW_WIDTH);
+
+    // シェーダーの生成
+    immutable programId = createShaderProgram(import("dman.vert"), import("dman.frag"));
+    scope(exit) glDeleteProgram(programId);
+
+    // VAOの生成
+    GLuint vao;
+    glGenVertexArrays(1, &vao);
+    scope(exit) glDeleteVertexArrays(1, &vao);
+
+    // 頂点バッファの生成
+    GLuint verticesBuffer;
+    glGenBuffers(1, &verticesBuffer);
+    scope(exit) glDeleteBuffers(1, &verticesBuffer);
+
+    // 頂点データ
+    immutable(GLfloat)[] triangle = [
+        -0.5f, -0.5f, 0.0f,
+         0.5f, -0.5f, 0.0f,
+         0.0f,  0.5f, 0.0f
+    ];
+
+    // 頂点データの設定
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, verticesBuffer);
+    glBufferData(GL_ARRAY_BUFFER, triangle.length * GLfloat.sizeof, triangle.ptr, GL_STATIC_DRAW);
+
+    // 頂点属性の設定
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * GLfloat.sizeof, cast(const(GLvoid)*) 0);
+    glEnableVertexAttribArray(0);
+
+    // 設定完了
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
 
     // 画面のクリア
-    glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // VAO・シェーダーを使用して描画する。
+    glUseProgram(programId);
+    glBindVertexArray(vao);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glBindVertexArray(0);
+    glUseProgram(0);
+    glFlush();
 
     // 描画結果に差し替える。
     SDL_GL_SwapWindow(window);
@@ -92,5 +211,85 @@ void main() {
             }
         }
     }
+}
+
+/**
+ *  シェーダーをコンパイルする。
+ *
+ *  Params:
+ *      source = シェーダーのソースコード
+ *      shaderType = シェーダーの種類
+ *  Returns:
+ *      コンパイルされたシェーダーのID
+ *  Throws:
+ *      OpenGlException エラー発生時にスロー
+ */
+GLuint compileShader(string source, GLenum shaderType) {
+    // シェーダー生成。エラー時は破棄する。
+    immutable shaderId = glCreateShader(shaderType);
+    scope(failure) glDeleteShader(shaderId);
+
+    // シェーダーのコンパイル
+    immutable length = cast(GLint) source.length;
+    const sourcePointer = source.ptr;
+    glShaderSource(shaderId, 1, &sourcePointer, &length);
+    glCompileShader(shaderId);
+
+    // コンパイル結果取得
+    GLint status;
+    glGetShaderiv(shaderId, GL_COMPILE_STATUS, &status);
+    if(status == GL_FALSE) {
+        // コンパイルエラー発生。ログを取得して例外を投げる。
+        GLint logLength;
+        glGetShaderiv(shaderId, GL_INFO_LOG_LENGTH, &logLength);
+        auto log = new GLchar[logLength];
+        glGetShaderInfoLog(shaderId, logLength, null, log.ptr);
+        throw new OpenGlException(assumeUnique(log));
+    }
+    return shaderId;
+}
+
+/**
+ *  シェーダープログラムを生成する。
+ *
+ *  Params:
+ *      vertexShaderSource = 頂点シェーダーのソースコード
+ *      fragmentShaderSource = フラグメントシェーダーのソースコード
+ *  Returns:
+ *      生成されたシェーダープログラム
+ *  Throws:
+ *      OpenGlException コンパイルエラー等発生時にスロー
+ */
+GLuint createShaderProgram(string vertexShaderSource, string fragmentShaderSource) {
+    // 頂点シェーダーコンパイル
+    immutable vertexShaderId = compileShader(vertexShaderSource, GL_VERTEX_SHADER);
+    scope(exit) glDeleteShader(vertexShaderId);
+
+    // フラグメントシェーダーコンパイル
+    immutable fragmentShaderId = compileShader(fragmentShaderSource, GL_FRAGMENT_SHADER);
+    scope(exit) glDeleteShader(fragmentShaderId);
+
+    // プログラム生成
+    auto programId = glCreateProgram();
+    scope(failure) glDeleteProgram(programId);
+    glAttachShader(programId, vertexShaderId);
+    scope(exit) glDetachShader(programId, vertexShaderId);
+    glAttachShader(programId, fragmentShaderId);
+    scope(exit) glDetachShader(programId, fragmentShaderId);
+
+    // プログラムのリンク
+    glLinkProgram(programId);
+    GLint status;
+    glGetProgramiv(programId, GL_LINK_STATUS, &status);
+    if(status == GL_FALSE) {
+        // エラー発生時はメッセージを取得して例外を投げる
+        GLint logLength;
+        glGetProgramiv(programId, GL_INFO_LOG_LENGTH, &logLength);
+        auto log = new GLchar[logLength];
+        glGetProgramInfoLog(programId, logLength, null, log.ptr);
+        throw new OpenGlException(assumeUnique(log));
+    }
+
+    return programId;
 }
 

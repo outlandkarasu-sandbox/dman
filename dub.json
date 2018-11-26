@@ -9,5 +9,7 @@
         "dependencies": {
                 "bindbc-sdl": "~>0.4.1",
                 "bindbc-opengl": "~>0.3.2"
-        }
+        },
+        "stringImportPaths": ["shaders/"],
+        "versions": ["GL_33"]
 }
