@@ -1,12 +1,15 @@
 import std.stdio;
 
+import std.exception : assumeUnique;
+
 import dman.sdl :
     enforceSdl,
     loadSdl
 ;
 
 import dman.opengl :
-    loadOpenGl
+    loadOpenGl,
+    OpenGlException
 ;
 
 import bindbc.sdl :
@@ -28,23 +31,40 @@ import bindbc.sdl :
 import bindbc.opengl :
     GL_ARRAY_BUFFER,
     GL_COLOR_BUFFER_BIT,
+    GL_COMPILE_STATUS,
     GL_ELEMENT_ARRAY_BUFFER,
     GL_FALSE,
     GL_FLOAT,
+    GL_FRAGMENT_SHADER,
+    GL_INFO_LOG_LENGTH,
     GL_STATIC_DRAW,
     GL_TRIANGLES,
     GL_UNSIGNED_INT,
+    GL_VERTEX_SHADER,
+    glAttachShader,
     glBindBuffer,
     glBufferData,
+    GLchar,
     glClearColor,
     glClear,
+    glCompileShader,
+    glCreateShader,
+    glCreateProgram,
     glDeleteBuffers,
+    glDeleteShader,
+    glDetachShader,
     glDisableVertexAttribArray,
     glDrawElements,
     glEnableVertexAttribArray,
+    GLenum,
     GLfloat,
     glFlush,
     glGenBuffers,
+    glGetShaderiv,
+    glGetShaderInfoLog,
+    GLint,
+    glLinkProgram,
+    glShaderSource,
     GLsizei,
     GLuint,
     glVertexAttribPointer,
@@ -151,5 +171,56 @@ void main() {
             }
         }
     }
+}
+
+/**
+ *  シェーダーをコンパイルする。
+ *
+ *  Params:
+ *      source = シェーダーのソースコード
+ *      shaderType = シェーダーの種類
+ *  Returns:
+ *      コンパイルされたシェーダーのID
+ *  Throws:
+ *      OpenGlException エラー発生時にスロー
+ */
+GLuint compileShader(string source, GLenum shaderType) {
+    // シェーダー生成。エラー時は破棄する。
+    immutable shaderId = glCreateShader(shaderType);
+    scope(failure) glDeleteShader(shaderId);
+
+    // シェーダーのコンパイル
+    immutable length = cast(GLint) source.length;
+    const sourcePointer = source.ptr;
+    glShaderSource(shaderId, 1, &sourcePointer, &length);
+    glCompileShader(shaderId);
+
+    // コンパイル結果取得
+    GLint status;
+    glGetShaderiv(shaderId, GL_COMPILE_STATUS, &status);
+    if(status == GL_FALSE) {
+        // コンパイルエラー発生。ログを取得して例外を投げる。
+        GLint logLength;
+        glGetShaderiv(shaderId, GL_INFO_LOG_LENGTH, &logLength);
+        GLchar[] log = new GLchar[logLength];
+        glGetShaderInfoLog(shaderId, logLength, null, log.ptr);
+        throw new OpenGlException(assumeUnique(log));
+    }
+    return shaderId;
+}
+
+/**
+ *  シェーダープログラムを生成する。
+ *
+ *  Params:
+ *      vertexShaderSource = 頂点シェーダーのソースコード
+ *      fragmentShaderSource = フラグメントシェーダーのソースコード
+ *  Returns:
+ *      生成されたシェーダープログラム
+ *  Throws:
+ *      OpenGlException コンパイルエラー等発生時にスロー
+ */
+GLuint createShaderProgram(string vertexShaderSource, string fragmentShaderSource) {
+    return 0;
 }
 
