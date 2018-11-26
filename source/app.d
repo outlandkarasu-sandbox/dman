@@ -37,6 +37,7 @@ import bindbc.opengl :
     GL_FLOAT,
     GL_FRAGMENT_SHADER,
     GL_INFO_LOG_LENGTH,
+    GL_LINK_STATUS,
     GL_STATIC_DRAW,
     GL_TRIANGLES,
     GL_UNSIGNED_INT,
@@ -51,6 +52,7 @@ import bindbc.opengl :
     glCreateShader,
     glCreateProgram,
     glDeleteBuffers,
+    glDeleteProgram,
     glDeleteShader,
     glDetachShader,
     glDisableVertexAttribArray,
@@ -60,6 +62,8 @@ import bindbc.opengl :
     GLfloat,
     glFlush,
     glGenBuffers,
+    glGetProgramiv,
+    glGetProgramInfoLog,
     glGetShaderiv,
     glGetShaderInfoLog,
     GLint,
@@ -112,6 +116,9 @@ void main() {
     // OpenGLのロード
     immutable openGlVersion = loadOpenGl();
     writefln("OpenGL loaded: %s", openGlVersion);
+
+    // シェーダーの生成
+    immutable programId = createShaderProgram(import("dman.vert"), import("dman.frag"));
 
     // 画面のクリア
     glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
@@ -202,7 +209,7 @@ GLuint compileShader(string source, GLenum shaderType) {
         // コンパイルエラー発生。ログを取得して例外を投げる。
         GLint logLength;
         glGetShaderiv(shaderId, GL_INFO_LOG_LENGTH, &logLength);
-        GLchar[] log = new GLchar[logLength];
+        auto log = new GLchar[logLength];
         glGetShaderInfoLog(shaderId, logLength, null, log.ptr);
         throw new OpenGlException(assumeUnique(log));
     }
@@ -221,6 +228,35 @@ GLuint compileShader(string source, GLenum shaderType) {
  *      OpenGlException コンパイルエラー等発生時にスロー
  */
 GLuint createShaderProgram(string vertexShaderSource, string fragmentShaderSource) {
-    return 0;
+    // 頂点シェーダーコンパイル
+    immutable vertexShaderId = compileShader(vertexShaderSource, GL_VERTEX_SHADER);
+    scope(exit) glDeleteShader(vertexShaderId);
+
+    // フラグメントシェーダーコンパイル
+    immutable fragmentShaderId = compileShader(fragmentShaderSource, GL_FRAGMENT_SHADER);
+    scope(exit) glDeleteShader(fragmentShaderId);
+
+    // プログラム生成
+    auto programId = glCreateProgram();
+    scope(failure) glDeleteProgram(programId);
+    glAttachShader(programId, vertexShaderId);
+    scope(exit) glDetachShader(programId, vertexShaderId);
+    glAttachShader(programId, fragmentShaderId);
+    scope(exit) glDetachShader(programId, fragmentShaderId);
+
+    // プログラムのリンク
+    glLinkProgram(programId);
+    GLint status;
+    glGetProgramiv(programId, GL_LINK_STATUS, &status);
+    if(status == GL_FALSE) {
+        // エラー発生時はメッセージを取得して例外を投げる
+        GLint logLength;
+        glGetProgramiv(programId, GL_INFO_LOG_LENGTH, &logLength);
+        auto log = new GLchar[logLength];
+        glGetProgramInfoLog(programId, logLength, null, log.ptr);
+        throw new OpenGlException(assumeUnique(log));
+    }
+
+    return programId;
 }
 
