@@ -14,6 +14,8 @@ import dman.opengl :
 ;
 
 import bindbc.sdl :
+    SDL_GL_CONTEXT_MAJOR_VERSION,
+    SDL_GL_CONTEXT_MINOR_VERSION,
     SDL_GL_CONTEXT_PROFILE_CORE,
     SDL_GL_CONTEXT_PROFILE_MASK,
     SDL_GL_CreateContext,
@@ -96,6 +98,12 @@ enum {
 /// ウィンドウ設定。作成時に表示・OpenGL有効化。
 enum WINDOW_FLAGS = SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL;
 
+/// OpenGLバージョン
+enum {
+    OPEN_GL_MAJOR_VERSION = 3,
+    OPEN_GL_MINOR_VERSION = 3,
+}
+
 /// メイン処理
 void main() {
     // SDLのロード
@@ -106,9 +114,11 @@ void main() {
     enforceSdl(SDL_Init(SDL_INIT_VIDEO));
     scope(exit) SDL_Quit();
 
-    // OpenGL初期設定
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    // OpenGLバージョン等設定
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, OPEN_GL_MAJOR_VERSION);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, OPEN_GL_MINOR_VERSION);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
     // メインウィンドウ生成
     auto window = enforceSdl(SDL_CreateWindow(
