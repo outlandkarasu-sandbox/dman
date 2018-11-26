@@ -1,6 +1,7 @@
 import std.stdio;
 
 import std.exception : assumeUnique;
+import std.string : fromStringz;
 
 import dman.sdl :
     enforceSdl,
@@ -13,8 +14,12 @@ import dman.opengl :
 ;
 
 import bindbc.sdl :
+    SDL_GL_CONTEXT_PROFILE_CORE,
+    SDL_GL_CONTEXT_PROFILE_MASK,
     SDL_GL_CreateContext,
     SDL_GL_DeleteContext,
+    SDL_GL_DOUBLEBUFFER,
+    SDL_GL_SetAttribute,
     SDL_GL_SwapWindow,
     SDL_INIT_VIDEO,
     SDL_Init,
@@ -41,6 +46,7 @@ import bindbc.opengl :
     GL_STATIC_DRAW,
     GL_TRIANGLES,
     GL_UNSIGNED_INT,
+    GL_VERSION,
     GL_VERTEX_SHADER,
     glAttachShader,
     glBindBuffer,
@@ -66,6 +72,7 @@ import bindbc.opengl :
     glGetProgramInfoLog,
     glGetShaderiv,
     glGetShaderInfoLog,
+    glGetString,
     GLint,
     glLinkProgram,
     glShaderSource,
@@ -99,6 +106,10 @@ void main() {
     enforceSdl(SDL_Init(SDL_INIT_VIDEO));
     scope(exit) SDL_Quit();
 
+    // OpenGL初期設定
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+
     // メインウィンドウ生成
     auto window = enforceSdl(SDL_CreateWindow(
         TITLE,
@@ -115,13 +126,15 @@ void main() {
 
     // OpenGLのロード
     immutable openGlVersion = loadOpenGl();
-    writefln("OpenGL loaded: %s", openGlVersion);
+    writefln("OpenGL loaded: %s(%s)",
+            openGlVersion,
+            (cast(const(char)*) glGetString(GL_VERSION)).fromStringz);
 
     // シェーダーの生成
     immutable programId = createShaderProgram(import("dman.vert"), import("dman.frag"));
 
     // 画面のクリア
-    glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
     // 頂点バッファの生成
