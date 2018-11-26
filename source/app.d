@@ -39,6 +39,7 @@ import bindbc.opengl :
     GL_ARRAY_BUFFER,
     GL_COLOR_BUFFER_BIT,
     GL_COMPILE_STATUS,
+    GL_DEPTH_BUFFER_BIT,
     GL_ELEMENT_ARRAY_BUFFER,
     GL_FALSE,
     GL_FLOAT,
@@ -52,6 +53,7 @@ import bindbc.opengl :
     GL_VERTEX_SHADER,
     glAttachShader,
     glBindBuffer,
+    glBindVertexArray,
     glBufferData,
     GLchar,
     glClearColor,
@@ -62,14 +64,17 @@ import bindbc.opengl :
     glDeleteBuffers,
     glDeleteProgram,
     glDeleteShader,
+    glDeleteVertexArrays,
     glDetachShader,
     glDisableVertexAttribArray,
+    glDrawArrays,
     glDrawElements,
     glEnableVertexAttribArray,
     GLenum,
     GLfloat,
     glFlush,
     glGenBuffers,
+    glGenVertexArrays,
     glGetProgramiv,
     glGetProgramInfoLog,
     glGetShaderiv,
@@ -79,8 +84,10 @@ import bindbc.opengl :
     glLinkProgram,
     glShaderSource,
     GLsizei,
+    glUseProgram,
     GLuint,
     glVertexAttribPointer,
+    glViewport,
     GLvoid
 ;
 
@@ -140,50 +147,53 @@ void main() {
             openGlVersion,
             (cast(const(char)*) glGetString(GL_VERSION)).fromStringz);
 
+    // ビューポートの設定
+    glViewport(0, 0, WINDOW_HEIGHT, WINDOW_WIDTH);
+
     // シェーダーの生成
     immutable programId = createShaderProgram(import("dman.vert"), import("dman.frag"));
+    scope(exit) glDeleteProgram(programId);
 
-    // 画面のクリア
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+    // VAOの生成
+    GLuint vao;
+    glGenVertexArrays(1, &vao);
+    scope(exit) glDeleteVertexArrays(1, &vao);
 
     // 頂点バッファの生成
     GLuint verticesBuffer;
     glGenBuffers(1, &verticesBuffer);
     scope(exit) glDeleteBuffers(1, &verticesBuffer);
 
-    // 頂点データの設定
-    glBindBuffer(GL_ARRAY_BUFFER, verticesBuffer);
+    // 頂点データ
     immutable(GLfloat)[] triangle = [
-        -1.0f, -1.0f, 0.0f,
-         1.0f, -1.0f, 0.0f,
-         0.0f,  1.0f, 0.0f,
+        -0.5f, -0.5f, 0.0f,
+         0.5f, -0.5f, 0.0f,
+         0.0f,  0.5f, 0.0f
     ];
-    glBufferData(GL_ARRAY_BUFFER, triangle.length * GLfloat.sizeof, triangle.ptr, GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    // インデックスバッファの生成
-    GLuint indiciesBuffer;
-    glGenBuffers(1, &indiciesBuffer);
-    scope(exit) glDeleteBuffers(1, &indiciesBuffer);
-
-    // インデックスデータの設定
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indiciesBuffer);
-    immutable(GLuint)[] indicies = [0, 1, 2];
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indicies.length * GLuint.sizeof, indicies.ptr, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-    // 頂点属性を設定する
+    // 頂点データの設定
+    glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, verticesBuffer);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indiciesBuffer);
+    glBufferData(GL_ARRAY_BUFFER, triangle.length * GLfloat.sizeof, triangle.ptr, GL_STATIC_DRAW);
 
+    // 頂点属性の設定
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * GLfloat.sizeof, cast(const(GLvoid)*) 0);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, cast(const(GLvoid)*) 0);
-    glDrawElements(GL_TRIANGLES, cast(GLsizei) indicies.length, GL_UNSIGNED_INT, cast(const(GLvoid)*) 0);
-    glDisableVertexAttribArray(0);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    // 設定完了
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    // 画面のクリア
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // VAO・シェーダーを使用して描画する。
+    glUseProgram(programId);
+    glBindVertexArray(vao);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glBindVertexArray(0);
+    glUseProgram(0);
     glFlush();
 
     // 描画結果に差し替える。
