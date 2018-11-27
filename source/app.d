@@ -99,7 +99,7 @@ enum {
     WINDOW_POS_X = 0,
     WINDOW_POS_Y = 0,
     WINDOW_WIDTH = 480,
-    WINDOW_HEIGHT = 320,
+    WINDOW_HEIGHT = 480, //WINDOW_HEIGHT = 320, 一旦正方形にしておく
 }
 
 /// ウィンドウ設定。作成時に表示・OpenGL有効化。
