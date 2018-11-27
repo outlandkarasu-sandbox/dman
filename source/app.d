@@ -49,6 +49,7 @@ import bindbc.opengl :
     GL_STATIC_DRAW,
     GL_TRIANGLES,
     GL_UNSIGNED_INT,
+    GL_UNSIGNED_SHORT,
     GL_VERSION,
     GL_VERTEX_SHADER,
     glAttachShader,
@@ -72,6 +73,7 @@ import bindbc.opengl :
     glEnableVertexAttribArray,
     GLenum,
     GLfloat,
+    GLushort,
     glFlush,
     glGenBuffers,
     glGenVertexArrays,
@@ -164,15 +166,23 @@ void main() {
     glGenBuffers(1, &verticesBuffer);
     scope(exit) glDeleteBuffers(1, &verticesBuffer);
 
+    // VBOの生成
+    GLuint elementBuffer;
+    glGenBuffers(1, &elementBuffer);
+    scope(exit) glDeleteBuffers(1, &elementBuffer);
+
     // 頂点データ
     immutable(GLfloat)[] triangle = [
         -0.5f, -0.5f, 0.0f,
          0.5f, -0.5f, 0.0f,
          0.0f,  0.5f, 0.0f
     ];
+    immutable(GLushort)[] indices = [0, 1, 2];
+
+    // VAOの設定開始
+    glBindVertexArray(vao);
 
     // 頂点データの設定
-    glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, verticesBuffer);
     glBufferData(GL_ARRAY_BUFFER, triangle.length * GLfloat.sizeof, triangle.ptr, GL_STATIC_DRAW);
 
@@ -180,9 +190,16 @@ void main() {
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * GLfloat.sizeof, cast(const(GLvoid)*) 0);
     glEnableVertexAttribArray(0);
 
-    // 設定完了
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    // VBOの設定
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.length * GLushort.sizeof, indices.ptr, GL_STATIC_DRAW);
+
+    // VAOの設定完了
     glBindVertexArray(0);
+
+    // 設定済みのバッファを選択解除する。
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
     // 画面のクリア
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -191,7 +208,9 @@ void main() {
     // VAO・シェーダーを使用して描画する。
     glUseProgram(programId);
     glBindVertexArray(vao);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+
+    glDrawElements(GL_TRIANGLES, cast(GLsizei) indices.length, GL_UNSIGNED_SHORT, cast(const(GLvoid)*) 0);
+
     glBindVertexArray(0);
     glUseProgram(0);
     glFlush();
