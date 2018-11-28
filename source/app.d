@@ -48,6 +48,8 @@ import bindbc.opengl :
     GL_LINK_STATUS,
     GL_STATIC_DRAW,
     GL_TRIANGLES,
+    GL_TRUE,
+    GL_UNSIGNED_BYTE,
     GL_UNSIGNED_INT,
     GL_UNSIGNED_SHORT,
     GL_VERSION,
@@ -73,6 +75,7 @@ import bindbc.opengl :
     glEnableVertexAttribArray,
     GLenum,
     GLfloat,
+    GLubyte,
     GLushort,
     glFlush,
     glGenBuffers,
@@ -171,11 +174,30 @@ void main() {
     glGenBuffers(1, &elementBuffer);
     scope(exit) glDeleteBuffers(1, &elementBuffer);
 
+    // 位置の型
+    struct Position {
+        GLfloat x;
+        GLfloat y;
+        GLfloat z;
+    }
+    // 色の型
+    struct Color {
+        GLubyte r;
+        GLubyte g;
+        GLubyte b;
+        GLubyte a;
+    }
+    // 頂点データ型
+    struct Vertex {
+        Position position;
+        Color color;
+    }
+
     // 頂点データ
-    immutable(GLfloat)[] triangle = [
-        -0.5f, -0.5f, 0.0f,
-         0.5f, -0.5f, 0.0f,
-         0.0f,  0.5f, 0.0f
+    immutable(Vertex)[] triangle = [
+        { Position(-0.5f, -0.5f, 0.0f), Color(255,   0,   0, 1) },
+        { Position( 0.5f, -0.5f, 0.0f), Color(  0, 255,   0, 1) },
+        { Position( 0.0f,  0.5f, 0.0f), Color(  0,   0, 255, 1) },
     ];
     immutable(GLushort)[] indices = [0, 1, 2];
 
@@ -184,11 +206,13 @@ void main() {
 
     // 頂点データの設定
     glBindBuffer(GL_ARRAY_BUFFER, verticesBuffer);
-    glBufferData(GL_ARRAY_BUFFER, triangle.length * GLfloat.sizeof, triangle.ptr, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, triangle.length * Vertex.sizeof, triangle.ptr, GL_STATIC_DRAW);
 
     // 頂点属性の設定
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * GLfloat.sizeof, cast(const(GLvoid)*) 0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, Vertex.sizeof, cast(const(GLvoid)*) 0);
     glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, Vertex.sizeof, cast(const(GLvoid)*) Vertex.color.offsetof);
+    glEnableVertexAttribArray(1);
 
     // VBOの設定
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer);
