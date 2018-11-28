@@ -1,5 +1,6 @@
 import std.stdio;
 
+import std.algorithm : max;
 import std.exception : assumeUnique;
 import std.string : fromStringz;
 
@@ -28,8 +29,11 @@ import bindbc.sdl :
     SDL_QUIT,
     SDL_Quit,
     SDL_CreateWindow,
+    SDL_Delay,
     SDL_DestroyWindow,
     SDL_Event,
+    SDL_GetPerformanceCounter,
+    SDL_GetPerformanceFrequency,
     SDL_PollEvent,
     SDL_WINDOW_OPENGL,
     SDL_WINDOW_SHOWN
@@ -115,6 +119,9 @@ enum {
     OPEN_GL_MAJOR_VERSION = 3,
     OPEN_GL_MINOR_VERSION = 3,
 }
+
+/// FPS設定
+enum FPS = 90;
 
 /// メイン処理
 void main() {
@@ -242,8 +249,14 @@ void main() {
     // 描画結果に差し替える。
     SDL_GL_SwapWindow(window);
 
+    // 1フレーム当たりのパフォーマンスカウンタ値計算。FPS制御のために使用する。
+    immutable performanceFrequency = SDL_GetPerformanceFrequency();
+    immutable countPerFrame = performanceFrequency / FPS;
+
     // メインループ
     mainLoop: for(;;) {
+        immutable start = SDL_GetPerformanceCounter();
+
         // イベントがキューにある限り処理を行う。           
         for(SDL_Event e; SDL_PollEvent(&e);) {
             switch(e.type) {
@@ -252,6 +265,13 @@ void main() {
             default:
                 break;
             }
+        }
+
+        immutable drawDelay = SDL_GetPerformanceCounter() - start;
+        if(countPerFrame < drawDelay) {
+            SDL_Delay(0);
+        } else {
+            SDL_Delay(cast(uint)((countPerFrame - drawDelay) * 1000 / performanceFrequency));
         }
     }
 }
