@@ -236,18 +236,21 @@ void main() {
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // VAO・シェーダーを使用して描画する。
-    glUseProgram(programId);
-    glBindVertexArray(vao);
-
-    glDrawElements(GL_TRIANGLES, cast(GLsizei) indices.length, GL_UNSIGNED_SHORT, cast(const(GLvoid)*) 0);
-
-    glBindVertexArray(0);
-    glUseProgram(0);
-    glFlush();
-
-    // 描画結果に差し替える。
-    SDL_GL_SwapWindow(window);
+    /// 描画処理
+    void draw() {
+        // VAO・シェーダーを使用して描画する。
+        glUseProgram(programId);
+        glBindVertexArray(vao);
+    
+        glDrawElements(GL_TRIANGLES, cast(GLsizei) indices.length, GL_UNSIGNED_SHORT, cast(const(GLvoid)*) 0);
+    
+        glBindVertexArray(0);
+        glUseProgram(0);
+        glFlush();
+    
+        // 描画結果に差し替える。
+        SDL_GL_SwapWindow(window);
+    }
 
     // 1フレーム当たりのパフォーマンスカウンタ値計算。FPS制御のために使用する。
     immutable performanceFrequency = SDL_GetPerformanceFrequency();
@@ -255,7 +258,7 @@ void main() {
 
     // メインループ
     mainLoop: for(;;) {
-        immutable start = SDL_GetPerformanceCounter();
+        immutable frameStart = SDL_GetPerformanceCounter();
 
         // イベントがキューにある限り処理を行う。           
         for(SDL_Event e; SDL_PollEvent(&e);) {
@@ -267,7 +270,11 @@ void main() {
             }
         }
 
-        immutable drawDelay = SDL_GetPerformanceCounter() - start;
+        // 描画実行
+        draw();
+
+        // 次フレームまで待機
+        immutable drawDelay = SDL_GetPerformanceCounter() - frameStart;
         if(countPerFrame < drawDelay) {
             SDL_Delay(0);
         } else {
