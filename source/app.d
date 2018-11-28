@@ -195,9 +195,9 @@ void main() {
 
     // 頂点データ
     immutable(Vertex)[] triangle = [
-        Vertex(Position(-0.5f, -0.5f, 0.0f), Color(255,   0,   0, 1)),
-        Vertex(Position( 0.5f, -0.5f, 0.0f), Color(  0, 255,   0, 1)),
-        Vertex(Position( 0.0f,  0.5f, 0.0f), Color(  0,   0, 255, 1)),
+        { Position(-0.5f, -0.5f, 0.0f), Color(255,   0,   0, 1) },
+        { Position( 0.5f, -0.5f, 0.0f), Color(  0, 255,   0, 1) },
+        { Position( 0.0f,  0.5f, 0.0f), Color(  0,   0, 255, 1) },
     ];
     immutable(GLushort)[] indices = [0, 1, 2];
 
