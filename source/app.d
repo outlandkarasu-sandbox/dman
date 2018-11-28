@@ -1,5 +1,6 @@
 import std.stdio;
 
+import std.algorithm : max;
 import std.exception : assumeUnique;
 import std.string : fromStringz;
 
@@ -28,8 +29,11 @@ import bindbc.sdl :
     SDL_QUIT,
     SDL_Quit,
     SDL_CreateWindow,
+    SDL_Delay,
     SDL_DestroyWindow,
     SDL_Event,
+    SDL_GetPerformanceCounter,
+    SDL_GetPerformanceFrequency,
     SDL_PollEvent,
     SDL_WINDOW_OPENGL,
     SDL_WINDOW_SHOWN
@@ -116,6 +120,9 @@ enum {
     OPEN_GL_MINOR_VERSION = 3,
 }
 
+/// FPS設定
+enum FPS = 90;
+
 /// メイン処理
 void main() {
     // SDLのロード
@@ -159,21 +166,6 @@ void main() {
     immutable programId = createShaderProgram(import("dman.vert"), import("dman.frag"));
     scope(exit) glDeleteProgram(programId);
 
-    // VAOの生成
-    GLuint vao;
-    glGenVertexArrays(1, &vao);
-    scope(exit) glDeleteVertexArrays(1, &vao);
-
-    // 頂点バッファの生成
-    GLuint verticesBuffer;
-    glGenBuffers(1, &verticesBuffer);
-    scope(exit) glDeleteBuffers(1, &verticesBuffer);
-
-    // VBOの生成
-    GLuint elementBuffer;
-    glGenBuffers(1, &elementBuffer);
-    scope(exit) glDeleteBuffers(1, &elementBuffer);
-
     // 位置の型
     struct Position {
         GLfloat x;
@@ -201,49 +193,74 @@ void main() {
     ];
     immutable(GLushort)[] indices = [0, 1, 2];
 
-    // VAOの設定開始
-    glBindVertexArray(vao);
 
-    // 頂点データの設定
+    // 頂点データの生成
+    GLuint verticesBuffer;
+    glGenBuffers(1, &verticesBuffer);
+    scope(exit) glDeleteBuffers(1, &verticesBuffer);
+
     glBindBuffer(GL_ARRAY_BUFFER, verticesBuffer);
     glBufferData(GL_ARRAY_BUFFER, triangle.length * Vertex.sizeof, triangle.ptr, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    // 頂点属性の設定
+    // VBOの生成
+    GLuint elementBuffer;
+    glGenBuffers(1, &elementBuffer);
+    scope(exit) glDeleteBuffers(1, &elementBuffer);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.length * GLushort.sizeof, indices.ptr, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    // VAOの生成
+    GLuint vao;
+    glGenVertexArrays(1, &vao);
+    scope(exit) glDeleteVertexArrays(1, &vao);
+
+    // VAOの内容設定
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, verticesBuffer);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, Vertex.sizeof, cast(const(GLvoid)*) 0);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, Vertex.sizeof, cast(const(GLvoid)*) Vertex.color.offsetof);
     glEnableVertexAttribArray(1);
-
-    // VBOの設定
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.length * GLushort.sizeof, indices.ptr, GL_STATIC_DRAW);
-
-    // VAOの設定完了
     glBindVertexArray(0);
 
     // 設定済みのバッファを選択解除する。
+    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-    // 画面のクリア
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    /// 描画処理
+    void draw() {
+        // 画面のクリア
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // VAO・シェーダーを使用して描画する。
-    glUseProgram(programId);
-    glBindVertexArray(vao);
+        // VAO・シェーダーを使用して描画する。
+        glUseProgram(programId);
+        glBindVertexArray(vao);
+    
+        glDrawElements(GL_TRIANGLES, cast(GLsizei) indices.length, GL_UNSIGNED_SHORT, cast(const(GLvoid)*) 0);
+    
+        glBindVertexArray(0);
+        glUseProgram(0);
+        glFlush();
+    
+        // 描画結果に差し替える。
+        SDL_GL_SwapWindow(window);
+    }
 
-    glDrawElements(GL_TRIANGLES, cast(GLsizei) indices.length, GL_UNSIGNED_SHORT, cast(const(GLvoid)*) 0);
-
-    glBindVertexArray(0);
-    glUseProgram(0);
-    glFlush();
-
-    // 描画結果に差し替える。
-    SDL_GL_SwapWindow(window);
+    // 1フレーム当たりのパフォーマンスカウンタ値計算。FPS制御のために使用する。
+    immutable performanceFrequency = SDL_GetPerformanceFrequency();
+    immutable countPerFrame = performanceFrequency / FPS;
 
     // メインループ
     mainLoop: for(;;) {
+        immutable frameStart = SDL_GetPerformanceCounter();
+
         // イベントがキューにある限り処理を行う。           
         for(SDL_Event e; SDL_PollEvent(&e);) {
             switch(e.type) {
@@ -252,6 +269,17 @@ void main() {
             default:
                 break;
             }
+        }
+
+        // 描画実行
+        draw();
+
+        // 次フレームまで待機
+        immutable drawDelay = SDL_GetPerformanceCounter() - frameStart;
+        if(countPerFrame < drawDelay) {
+            SDL_Delay(0);
+        } else {
+            SDL_Delay(cast(uint)((countPerFrame - drawDelay) * 1000 / performanceFrequency));
         }
     }
 }
