@@ -104,26 +104,6 @@ unittest {
     ]);
 }
 
-/// 平行移動を行う行列の生成。
-auto translated(S, T)(S slice, T x, T y, T z) if(isMatrix!S) {
-    auto m = slice.identitied;
-    m[0, 3] = x;
-    m[1, 3] = y;
-    m[2, 3] = z;
-    return m;
-}
-
-///
-unittest {
-    auto m = identity4.translated(1.0f, 2.0f, 3.0f);
-    assert(m.glMat4 == [
-        1.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 0.0f,
-        1.0f, 2.0f, 3.0f, 1.0f,
-    ]);
-}
-
 /// ベクトルの内積を計算する。
 auto dotProduct(S1, S2)(S1 a, S2 b) if(isVector!S1 && isVector!S2)
 in {
@@ -167,6 +147,46 @@ unittest {
         0.0f, 1.0f, 0.0f, 0.0f,
         0.0f, 0.0f, 1.0f, 0.0f,
         1.0f, 2.0f, 3.0f, 1.0f,
+    ]);
+}
+
+/// 平行移動を行う行列の生成。
+auto translated(S, T)(S slice, T x, T y, T z) if(isMatrix!S) {
+    auto m = slice.identitied;
+    m[0, 3] = x;
+    m[1, 3] = y;
+    m[2, 3] = z;
+    return m;
+}
+
+///
+unittest {
+    auto m = identity4.translated(1.0f, 2.0f, 3.0f);
+    assert(m.glMat4 == [
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        1.0f, 2.0f, 3.0f, 1.0f,
+    ]);
+}
+
+/// 拡大縮小を行う行列の生成。
+auto scaled(S, T)(S slice, T x, T y, T z) if(isMatrix!S) {
+    auto m = slice.identitied;
+    m[0, 0] = x;
+    m[1, 1] = y;
+    m[2, 2] = z;
+    return m;
+}
+
+///
+unittest {
+    auto m = identity4.scaled(0.5f, 2.0f, 3.0f);
+    assert(m.glMat4 == [
+        0.5f, 0.0f, 0.0f, 0.0f,
+        0.0f, 2.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 3.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f,
     ]);
 }
 
