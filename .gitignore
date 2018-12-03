@@ -2,6 +2,7 @@
 *.o
 *.obj
 /dman
+/dman-test-library
 
 # Compiled Dynamic libraries
 *.so

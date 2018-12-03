@@ -3,6 +3,8 @@
 	"versions": {
 		"bindbc-loader": "0.1.1",
 		"bindbc-opengl": "0.3.2",
-		"bindbc-sdl": "0.4.1"
+		"bindbc-sdl": "0.4.1",
+		"mir-algorithm": "3.1.19",
+		"mir-core": "0.0.12"
 	}
 }
