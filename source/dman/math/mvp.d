@@ -55,6 +55,17 @@ in {
     return slice;
 }
 
+///
+unittest {
+    auto m = mat4();
+    assert(m.identitied.glMat4 == [
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f,
+    ]);
+}
+
 /// ditto
 auto identity4(T = float)() {
     return mat4!T.identitied;
@@ -85,7 +96,7 @@ unittest {
 /// OpenGLベクトル形式に変換する。
 auto glVec4(S)(S slice) if(isVector!S)
 in {
-    assert(slice.shape == [1, 4] || slices.shape == [4, 1]);
+    assert(slice.shape == [4]);
 } out(r) {
     assert(r.length == 4);
 } body {
@@ -148,6 +159,50 @@ unittest {
         0.0f, 0.0f, 1.0f, 0.0f,
         1.0f, 2.0f, 3.0f, 1.0f,
     ]);
+}
+
+/// 行列とベクトルの積を計算する。
+void dotProduct(S, T)(S a, T b, T result) if(isMatrix!S && isVector!T)
+in {
+    assert(a.shape[1] == b.shape[0]);
+    assert(result.shape[0] == a.shape[0]);
+} body {
+    // aのi行目・bのj列目の内積を計算して代入
+    foreach(i; 0 .. a.shape[0]) {
+        result[i] = dotProduct(a[i, 0 .. $], b);
+    }
+}
+
+///
+unittest {
+    auto a = identity4.translated(1.0f, 2.0f, 3.0f);
+    auto b = vec4();
+    b[] = [0.0f, 0.0f, 0.0f, 1.0f];
+    auto result = vec4();
+    dotProduct(a, b, result);
+    assert(result.glVec4 == [1.0f, 2.0f, 3.0f, 1.0f]);
+}
+
+/// 行列とベクトルの積を計算する。
+void dotProduct(S, T, U)(S a, T b, U result) if(isVector!S && isMatrix!T && isVector!U)
+in {
+    assert(a.shape[0] == b.shape[0]);
+    assert(result.shape[0] == b.shape[1]);
+} body {
+    // aのi行目・bのj列目の内積を計算して代入
+    foreach(j; 0 .. b.shape[1]) {
+        result[j] = dotProduct(a, b[0 .. $, j]);
+    }
+}
+
+///
+unittest {
+    auto a = vec4();
+    a[] = [0.0f, 0.0f, 0.0f, 1.0f];
+    auto b = identity4.translated(1.0f, 2.0f, 3.0f).transposed;
+    auto result = vec4();
+    dotProduct(a, b, result);
+    assert(result.glVec4 == [1.0f, 2.0f, 3.0f, 1.0f]);
 }
 
 /// 平行移動を行う行列の生成。
