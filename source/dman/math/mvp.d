@@ -23,11 +23,14 @@ import mir.ndslice :
     map,
     ndarray,
     slice,
+    sliced,
     transposed,
     Universal,
     universal,
     zip
 ;
+
+@safe:
 
 /// 4x4行列を生成する。
 auto mat4(T = float)()
@@ -37,6 +40,35 @@ out(r) {
     assert(r.kind == Universal);
 } body {
     return slice!T(4, 4).universal;
+}
+
+/// 4x4行列を生成する。
+auto mat4ed(T = float)(T[] array) @nogc nothrow
+out(r) {
+    static assert(isMatrix!(typeof(r)));
+    immutable float[2] expected = [4, 4];
+    assert(r.shape == expected);
+    assert(r.kind == Universal);
+} body {
+    return array.sliced!2(4, 4).universal;
+}
+
+///
+@nogc nothrow unittest {
+    float[16] array = [
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f
+    ];
+    auto m = array.mat4ed;
+    immutable float[4][4] expected = [
+        [1.0f, 0.0f, 0.0f, 0.0f],
+        [0.0f, 1.0f, 0.0f, 0.0f],
+        [0.0f, 0.0f, 1.0f, 0.0f],
+        [0.0f, 0.0f, 0.0f, 1.0f],
+    ];
+    assert(m[] == expected);
 }
 
 /// 4次元ベクトルを生成する。
@@ -49,6 +81,26 @@ out(r) {
     return slice!T(4).universal;
 }
 
+/// 4次元ベクトルを生成する。
+auto vec4ed(T = float)(T[] array) @nogc nothrow
+in {
+    assert(array.length >= 4);
+} out(r) {
+    static assert(isVector!(typeof(r)));
+    immutable float[1] expected = [4];
+    assert(r.shape == expected);
+    assert(r.kind == Universal);
+} body {
+    return array.sliced!(1)(4).universal;
+}
+
+///
+@nogc nothrow unittest {
+    float[4] array = [0.0f, 1.0f, 2.0f, 3.0f];
+    auto v = array.vec4ed;
+    immutable float[4] expected = [0.0f, 1.0f, 2.0f, 3.0f];
+    assert(v[] == expected);
+}
 /// 単位行列にする。
 auto toIdentity(S)(S slice) if(isMatrix!S)
 in {
@@ -121,7 +173,7 @@ unittest {
 }
 
 /// ベクトルの内積を計算する。
-auto dotProduct(S1, S2)(S1 a, S2 b) if(isVector!S1 && isVector!S2)
+auto dotProduct(S1, S2)(S1 a, S2 b) @nogc nothrow if(isVector!S1 && isVector!S2)
 in {
     assert(a.shape == b.shape);
 } body {
@@ -138,7 +190,7 @@ unittest {
 }
 
 /// 行列積を計算する。
-void dotProduct(S, T)(S a, S b, T result) if(isMatrix!S && isMatrix!T)
+void dotProduct(S, T)(S a, S b, T result) @nogc nothrow if(isMatrix!S && isMatrix!T)
 in {
     assert(a.shape[1] == b.shape[0]);
     assert(result.shape[0] == a.shape[0]);
@@ -167,7 +219,7 @@ unittest {
 }
 
 /// 行列とベクトルの積を計算する。
-void dotProduct(S, T)(S a, T b, T result) if(isMatrix!S && isVector!T)
+void dotProduct(S, T)(S a, T b, T result) @nogc nothrow if(isMatrix!S && isVector!T)
 in {
     assert(a.shape[1] == b.shape[0]);
     assert(result.shape[0] == a.shape[0]);
@@ -189,7 +241,7 @@ unittest {
 }
 
 /// 行列とベクトルの積を計算する。
-void dotProduct(S, T, U)(S a, T b, U result) if(isVector!S && isMatrix!T && isVector!U)
+void dotProduct(S, T, U)(S a, T b, U result) @nogc nothrow if(isVector!S && isMatrix!T && isVector!U)
 in {
     assert(a.shape[0] == b.shape[0]);
     assert(result.shape[0] == b.shape[1]);
@@ -211,7 +263,7 @@ unittest {
 }
 
 /// 平行移動を行う行列の生成。
-auto toTranslate(S, T)(S slice, T x, T y, T z) if(isMatrix!S) {
+auto toTranslate(S, T)(S slice, T x, T y, T z) @nogc nothrow if(isMatrix!S) {
     auto m = slice.toIdentity;
     m[0, 3] = x;
     m[1, 3] = y;
@@ -231,7 +283,7 @@ unittest {
 }
 
 /// 拡大縮小を行う行列の生成。
-auto toScale(S, T)(S slice, T x, T y, T z) if(isMatrix!S) {
+auto toScale(S, T)(S slice, T x, T y, T z) @nogc nothrow if(isMatrix!S) {
     auto m = slice.toIdentity;
     m[0, 0] = x;
     m[1, 1] = y;
@@ -251,7 +303,7 @@ unittest {
 }
 
 /// X軸回転を行う行列の生成
-auto toRotateX(S, T)(S slice, T rad) if(isMatrix!S) {
+auto toRotateX(S, T)(S slice, T rad) @nogc nothrow if(isMatrix!S) {
     auto m = slice.toIdentity;
     auto sinRad = sin(rad);
     auto cosRad = cos(rad);
@@ -276,7 +328,7 @@ unittest {
 }
 
 /// Y軸回転を行う行列の生成
-auto toRotateY(S, T)(S slice, T rad) if(isMatrix!S) {
+auto toRotateY(S, T)(S slice, T rad) @nogc nothrow if(isMatrix!S) {
     auto m = slice.toIdentity;
     auto sinRad = sin(rad);
     auto cosRad = cos(rad);
@@ -301,7 +353,7 @@ unittest {
 }
 
 /// Z軸回転を行う行列の生成
-auto toRotateZ(S, T)(S slice, T rad) if(isMatrix!S) {
+auto toRotateZ(S, T)(S slice, T rad) @nogc nothrow if(isMatrix!S) {
     auto m = slice.toIdentity;
     auto sinRad = sin(rad);
     auto cosRad = cos(rad);
