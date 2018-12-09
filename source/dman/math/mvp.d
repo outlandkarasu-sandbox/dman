@@ -265,14 +265,38 @@ auto rotatedX(S, T)(S slice, T rad) if(isMatrix!S) {
 ///
 unittest {
     import std.math : PI, sqrt;
-    import std.conv : to;
 
     // 60度回転
     auto m = identity4.rotatedX(PI / 3.0f);
     auto v = vec4();
-    v[] = [0.0f, 0.0f, 1.0f, 1.0f];
+    v[] = [1.0f, 0.0f, 1.0f, 1.0f];
     auto result = vec4();
     m.dotProduct(v, result);
-    assert(result[] == [0.0f, sqrt(3.0f) / 2.0f, 1.0f / 2.0f, 1.0f], result.to!string);
+    assert(result[] == [1.0f, sqrt(3.0f) / 2.0f, 1.0f / 2.0f, 1.0f]);
+}
+
+/// Y軸回転を行う行列の生成
+auto rotatedY(S, T)(S slice, T rad) if(isMatrix!S) {
+    auto m = slice.identitied;
+    auto sinRad = sin(rad);
+    auto cosRad = cos(rad);
+    m[0, 0] = cosRad;
+    m[0, 2] = -sinRad;
+    m[2, 0] = sinRad;
+    m[2, 2] = cosRad;
+    return m;
+}
+
+///
+unittest {
+    import std.math : PI, sqrt;
+
+    // 60度回転
+    auto m = identity4.rotatedY(PI / 3.0f);
+    auto v = vec4();
+    v[] = [1.0f, 1.0f, 0.0f, 1.0f];
+    auto result = vec4();
+    m.dotProduct(v, result);
+    assert(result[] == [1.0f / 2.0f, 1.0f, sqrt(3.0f) / 2.0f, 1.0f]);
 }
 
