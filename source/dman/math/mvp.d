@@ -49,8 +49,8 @@ out(r) {
     return slice!T(4).universal;
 }
 
-/// 単位行列を生成する。
-auto identitied(S)(S slice) if(isMatrix!S)
+/// 単位行列にする。
+auto toIdentity(S)(S slice) if(isMatrix!S)
 in {
     assert(slice.shape[0] == slice.shape[1]);
 } body {
@@ -63,7 +63,7 @@ in {
 ///
 unittest {
     auto m = mat4();
-    assert(m.identitied.glMat4 == [
+    assert(m.toIdentity.glMat4 == [
         1.0f, 0.0f, 0.0f, 0.0f,
         0.0f, 1.0f, 0.0f, 0.0f,
         0.0f, 0.0f, 1.0f, 0.0f,
@@ -73,7 +73,7 @@ unittest {
 
 /// ditto
 auto identity4(T = float)() {
-    return mat4!T.identitied;
+    return mat4!T.toIdentity;
 }
 
 /// OpenGL行列形式(Column-Major)に変換する。
@@ -155,7 +155,7 @@ in {
 ///
 unittest {
     auto a = identity4;
-    auto b = identity4.translated(1.0f, 2.0f, 3.0f);
+    auto b = identity4.toTranslate(1.0f, 2.0f, 3.0f);
     auto result = identity4;
     dotProduct(a, b, result);
     assert(result.glMat4 == [
@@ -180,7 +180,7 @@ in {
 
 ///
 unittest {
-    auto a = identity4.translated(1.0f, 2.0f, 3.0f);
+    auto a = identity4.toTranslate(1.0f, 2.0f, 3.0f);
     auto b = vec4();
     b[] = [0.0f, 0.0f, 0.0f, 1.0f];
     auto result = vec4();
@@ -204,15 +204,15 @@ in {
 unittest {
     auto a = vec4();
     a[] = [0.0f, 0.0f, 0.0f, 1.0f];
-    auto b = identity4.translated(1.0f, 2.0f, 3.0f).transposed;
+    auto b = identity4.toTranslate(1.0f, 2.0f, 3.0f).transposed;
     auto result = vec4();
     dotProduct(a, b, result);
     assert(result.glVec4 == [1.0f, 2.0f, 3.0f, 1.0f]);
 }
 
 /// 平行移動を行う行列の生成。
-auto translated(S, T)(S slice, T x, T y, T z) if(isMatrix!S) {
-    auto m = slice.identitied;
+auto toTranslate(S, T)(S slice, T x, T y, T z) if(isMatrix!S) {
+    auto m = slice.toIdentity;
     m[0, 3] = x;
     m[1, 3] = y;
     m[2, 3] = z;
@@ -221,7 +221,7 @@ auto translated(S, T)(S slice, T x, T y, T z) if(isMatrix!S) {
 
 ///
 unittest {
-    auto m = identity4.translated(1.0f, 2.0f, 3.0f);
+    auto m = identity4.toTranslate(1.0f, 2.0f, 3.0f);
     assert(m.glMat4 == [
         1.0f, 0.0f, 0.0f, 0.0f,
         0.0f, 1.0f, 0.0f, 0.0f,
@@ -231,8 +231,8 @@ unittest {
 }
 
 /// 拡大縮小を行う行列の生成。
-auto scaled(S, T)(S slice, T x, T y, T z) if(isMatrix!S) {
-    auto m = slice.identitied;
+auto toScale(S, T)(S slice, T x, T y, T z) if(isMatrix!S) {
+    auto m = slice.toIdentity;
     m[0, 0] = x;
     m[1, 1] = y;
     m[2, 2] = z;
@@ -241,7 +241,7 @@ auto scaled(S, T)(S slice, T x, T y, T z) if(isMatrix!S) {
 
 ///
 unittest {
-    auto m = identity4.scaled(0.5f, 2.0f, 3.0f);
+    auto m = identity4.toScale(0.5f, 2.0f, 3.0f);
     assert(m.glMat4 == [
         0.5f, 0.0f, 0.0f, 0.0f,
         0.0f, 2.0f, 0.0f, 0.0f,
@@ -251,8 +251,8 @@ unittest {
 }
 
 /// X軸回転を行う行列の生成
-auto rotatedX(S, T)(S slice, T rad) if(isMatrix!S) {
-    auto m = slice.identitied;
+auto toRotateX(S, T)(S slice, T rad) if(isMatrix!S) {
+    auto m = slice.toIdentity;
     auto sinRad = sin(rad);
     auto cosRad = cos(rad);
     m[1, 1] = cosRad;
@@ -267,7 +267,7 @@ unittest {
     import std.math : PI, sqrt;
 
     // 60度回転
-    auto m = identity4.rotatedX(PI / 3.0f);
+    auto m = identity4.toRotateX(PI / 3.0f);
     auto v = vec4();
     v[] = [1.0f, 0.0f, 1.0f, 1.0f];
     auto result = vec4();
@@ -276,8 +276,8 @@ unittest {
 }
 
 /// Y軸回転を行う行列の生成
-auto rotatedY(S, T)(S slice, T rad) if(isMatrix!S) {
-    auto m = slice.identitied;
+auto toRotateY(S, T)(S slice, T rad) if(isMatrix!S) {
+    auto m = slice.toIdentity;
     auto sinRad = sin(rad);
     auto cosRad = cos(rad);
     m[0, 0] = cosRad;
@@ -292,7 +292,7 @@ unittest {
     import std.math : PI, sqrt;
 
     // 60度回転
-    auto m = identity4.rotatedY(PI / 3.0f);
+    auto m = identity4.toRotateY(PI / 3.0f);
     auto v = vec4();
     v[] = [1.0f, 1.0f, 0.0f, 1.0f];
     auto result = vec4();
@@ -301,8 +301,8 @@ unittest {
 }
 
 /// Z軸回転を行う行列の生成
-auto rotatedZ(S, T)(S slice, T rad) if(isMatrix!S) {
-    auto m = slice.identitied;
+auto toRotateZ(S, T)(S slice, T rad) if(isMatrix!S) {
+    auto m = slice.toIdentity;
     auto sinRad = sin(rad);
     auto cosRad = cos(rad);
     m[0, 0] = cosRad;
@@ -317,7 +317,7 @@ unittest {
     import std.math : PI, sqrt;
 
     // 60度回転
-    auto m = identity4.rotatedZ(PI / 3.0f);
+    auto m = identity4.toRotateZ(PI / 3.0f);
     auto v = vec4();
     v[] = [0.0f, 1.0f, 1.0f, 1.0f];
     auto result = vec4();
