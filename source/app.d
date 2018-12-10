@@ -14,6 +14,11 @@ import dman.opengl :
     OpenGlException
 ;
 
+import dman.math.mvp :
+    mat4ed,
+    toRotateXYZ
+;
+
 import bindbc.sdl :
     SDL_GL_CONTEXT_MAJOR_VERSION,
     SDL_GL_CONTEXT_MINOR_VERSION,
@@ -89,10 +94,12 @@ import bindbc.opengl :
     glGetShaderiv,
     glGetShaderInfoLog,
     glGetString,
+    glGetUniformLocation,
     GLint,
     glLinkProgram,
     glShaderSource,
     GLsizei,
+    glUniformMatrix4fv,
     glUseProgram,
     GLuint,
     glVertexAttribPointer,
@@ -233,6 +240,12 @@ void main() {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
+    // uniform変数のlocationを取得しておく。
+    immutable transformLocation = glGetUniformLocation(programId, "transform");
+
+    float[4 * 4] transformArray = void;
+    float rotate = 0.0f;
+
     /// 描画処理
     void draw() {
         // 画面のクリア
@@ -242,6 +255,11 @@ void main() {
         // VAO・シェーダーを使用して描画する。
         glUseProgram(programId);
         glBindVertexArray(vao);
+
+        // 座標変換行列をuniform変数に設定する。
+        rotate += 0.01f;
+        transformArray.mat4ed.toRotateXYZ(rotate, rotate, rotate);
+        glUniformMatrix4fv(transformLocation, 1, true, transformArray.ptr);
     
         glDrawElements(GL_TRIANGLES, cast(GLsizei) indices.length, GL_UNSIGNED_SHORT, cast(const(GLvoid)*) 0);
     
