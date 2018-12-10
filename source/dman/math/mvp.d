@@ -377,3 +377,56 @@ unittest {
     assert(result[] == [sqrt(3.0f) / 2.0f, 1.0f / 2.0f, 1.0f, 1.0f]);
 }
 
+/// 回転行列の生成
+private auto toRotate(alias R1, alias R2, alias R3, S, T)(S slice, T r1, T r2, T r3) @nogc nothrow if(isMatrix!S) {
+    T[4 * 4] m = void;
+    auto rotateMatrix = m.mat4ed;
+
+    T[4 * 4] t = void;
+    auto temp = t.mat4ed;
+
+    auto s = slice.toIdentity;
+    R1(rotateMatrix, r1); 
+    dotProduct(rotateMatrix, s, temp);
+    s[0 .. $, 0 .. $] = temp;
+
+    R2(rotateMatrix, r2); 
+    dotProduct(rotateMatrix, s, temp);
+    s[0 .. $, 0 .. $] = temp;
+
+    R3(rotateMatrix, r3); 
+    dotProduct(rotateMatrix, s, temp);
+    s[0 .. $, 0 .. $] = temp;
+    return s;
+}
+
+/// XYZ回転行列を返す。
+auto toRotateXYZ(S, T)(S slice, T x, T y, T z) @nogc nothrow if(isMatrix!S) {
+    return toRotate!(toRotateX, toRotateY, toRotateZ)(slice, x, y, z);
+}
+
+/// XZY回転行列を返す。
+auto toRotateXZY(S, T)(S slice, T x, T y, T z) @nogc nothrow if(isMatrix!S) {
+    return toRotate!(toRotateX, toRotateZ, toRotateY)(slice, x, z, y);
+}
+
+/// YXZ回転行列を返す。
+auto toRotateYXZ(S, T)(S slice, T x, T y, T z) @nogc nothrow if(isMatrix!S) {
+    return toRotate!(toRotateY, toRotateX, toRotateZ)(slice, y, x, z);
+}
+
+/// YZX回転行列を返す。
+auto toRotateYZX(S, T)(S slice, T x, T y, T z) @nogc nothrow if(isMatrix!S) {
+    return toRotate!(toRotateY, toRotateZ, toRotateX)(slice, y, z, x);
+}
+
+/// ZXY回転行列を返す。
+auto toRotateZXY(S, T)(S slice, T x, T y, T z) @nogc nothrow if(isMatrix!S) {
+    return toRotate!(toRotateZ, toRotateX, toRotateY)(slice, z, x, y);
+}
+
+/// ZYX回転行列を返す。
+auto toRotateZYX(S, T)(S slice, T x, T y, T z) @nogc nothrow if(isMatrix!S) {
+    return toRotate!(toRotateZ, toRotateY, toRotateX)(slice, z, y, x);
+}
+
