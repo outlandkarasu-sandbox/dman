@@ -21,3 +21,12 @@ SHALL THE COPYRIGHT HOLDERS OR ANYONE DISTRIBUTING THE SOFTWARE BE LIABLE
 FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
 ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
+
+********
+
+./asset folder contents are licensed under ./asset/License.txt (in japanese).
+
+see also
+(Japanese) http://www.kmonos.net/nysl/
+(Unofficial English) http://www.kmonos.net/nysl/index.en.html
+
