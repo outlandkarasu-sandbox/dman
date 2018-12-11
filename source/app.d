@@ -108,8 +108,17 @@ import bindbc.opengl :
 ;
 
 import derelict.assimp3.assimp :
+    aiAttachLogStream,
+    aiDefaultLogStream_STDOUT,
+    aiGetPredefinedLogStream,
+    aiProcessPreset_TargetRealtime_MaxQuality,
+    aiImportFile,
+    aiReleaseImport,
     DerelictASSIMP3
 ;
+
+/// D言語くんモデル
+enum DMAN_MODEL_PATH = "./asset/Dman.fbx";
 
 /// ウィンドウタイトル
 enum TITLE = "D-man Viewer";
@@ -138,6 +147,14 @@ enum FPS = 90;
 void main() {
     // ASSIMPのロード
     DerelictASSIMP3.load();
+
+    // 標準出力にログを出すよう設定
+    auto logStream = aiGetPredefinedLogStream(aiDefaultLogStream_STDOUT, null);
+    aiAttachLogStream(&logStream);
+
+    // D言語くん読み込み
+    auto scene = aiImportFile(DMAN_MODEL_PATH, aiProcessPreset_TargetRealtime_MaxQuality);
+    scope(exit) aiReleaseImport(scene);
 
     // SDLのロード
     immutable sdlVersion = loadSdl();
