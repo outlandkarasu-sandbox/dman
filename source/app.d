@@ -1,6 +1,7 @@
 import std.stdio;
 
-import std.algorithm : max;
+import std.algorithm : max, map, joiner;
+import std.array : array;
 import std.exception : assumeUnique;
 import std.string : fromStringz;
 
@@ -15,8 +16,11 @@ import dman.opengl :
 ;
 
 import dman.math.mvp :
+    dotProduct,
     mat4ed,
-    toRotateXYZ
+    toRotateXYZ,
+    toScale,
+    toTranslate
 ;
 
 import bindbc.sdl :
@@ -143,6 +147,27 @@ enum {
 /// FPS設定
 enum FPS = 90;
 
+/// 位置の型
+struct Position {
+    GLfloat x;
+    GLfloat y;
+    GLfloat z;
+}
+
+/// 色の型
+struct Color {
+    GLubyte r;
+    GLubyte g;
+    GLubyte b;
+    GLubyte a;
+}
+
+/// 頂点データ型
+struct Vertex {
+    Position position;
+    Color color;
+}
+
 /// メイン処理
 void main() {
     // ASSIMPのロード
@@ -155,7 +180,29 @@ void main() {
     // D言語くん読み込み
     auto scene = aiImportFile(DMAN_MODEL_PATH, aiProcessPreset_TargetRealtime_MaxQuality);
     scope(exit) aiReleaseImport(scene);
-    writefln("%s", scene);
+    auto meshes = scene.mMeshes[0 .. scene.mNumMeshes];
+    auto materials = scene.mMaterials[0 .. scene.mNumMaterials];
+    auto materialProperties = materials[0].mProperties[0 .. materials[0].mNumProperties];
+    foreach(m; materialProperties) {
+        writefln("%s", m.mKey.data[0 .. m.mKey.length]);
+    }
+
+    auto mesh = meshes[0];
+    writefln("name: %s, vertices: %s, faces: %s, bones: %s, animMeshes: %s",
+        mesh.mName.data[0 .. mesh.mName.length],
+        mesh.mNumVertices,
+        mesh.mNumFaces,
+        mesh.mNumBones,
+        mesh.mNumAnimMeshes);
+
+    auto vertices = mesh.mVertices[0 .. mesh.mNumVertices]
+        .map!(v => Vertex(Position(v.x, v.y, v.z), Color(255, 0, 0, 255)))
+        .array;
+    auto indices = mesh.mFaces[0 .. mesh.mNumFaces]
+        .map!(f => f.mIndices[0 .. f.mNumIndices])
+        .joiner
+        .map!(i => cast(GLushort) i)
+        .array;
 
     // SDLのロード
     immutable sdlVersion = loadSdl();
@@ -198,41 +245,13 @@ void main() {
     immutable programId = createShaderProgram(import("dman.vert"), import("dman.frag"));
     scope(exit) glDeleteProgram(programId);
 
-    // 位置の型
-    struct Position {
-        GLfloat x;
-        GLfloat y;
-        GLfloat z;
-    }
-    // 色の型
-    struct Color {
-        GLubyte r;
-        GLubyte g;
-        GLubyte b;
-        GLubyte a;
-    }
-    // 頂点データ型
-    struct Vertex {
-        Position position;
-        Color color;
-    }
-
-    // 頂点データ
-    immutable(Vertex)[] triangle = [
-        { Position(-0.5f, -0.5f, 0.0f), Color(255,   0,   0, 1) },
-        { Position( 0.5f, -0.5f, 0.0f), Color(  0, 255,   0, 1) },
-        { Position( 0.0f,  0.5f, 0.0f), Color(  0,   0, 255, 1) },
-    ];
-    immutable(GLushort)[] indices = [0, 1, 2];
-
-
     // 頂点データの生成
     GLuint verticesBuffer;
     glGenBuffers(1, &verticesBuffer);
     scope(exit) glDeleteBuffers(1, &verticesBuffer);
 
     glBindBuffer(GL_ARRAY_BUFFER, verticesBuffer);
-    glBufferData(GL_ARRAY_BUFFER, triangle.length * Vertex.sizeof, triangle.ptr, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vertices.length * Vertex.sizeof, vertices.ptr, GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     // VBOの生成
@@ -268,7 +287,18 @@ void main() {
     // uniform変数のlocationを取得しておく。
     immutable transformLocation = glGetUniformLocation(programId, "transform");
 
+    float[4 * 4] rotateArray = void;
+    float[4 * 4] scaleArray = void;
+    float[4 * 4] translateArray = void;
     float[4 * 4] transformArray = void;
+    float[4 * 4] tempArray = void;
+    auto rotateMat = rotateArray.mat4ed;
+    auto scaleMat = scaleArray.mat4ed;
+    auto translateMat = translateArray.mat4ed;
+    auto transformMat = transformArray.mat4ed;
+    auto tempMat = tempArray.mat4ed;
+    scaleMat.toScale(0.005f, 0.005f, 0.005f);
+    translateMat.toTranslate(0.0f, -0.66f, 0.0f);
     float rotate = 0.0f;
 
     /// 描画処理
@@ -283,7 +313,8 @@ void main() {
 
         // 座標変換行列をuniform変数に設定する。
         rotate += 0.01f;
-        transformArray.mat4ed.toRotateXYZ(rotate, rotate, rotate);
+        translateMat.dotProduct(scaleMat, tempMat);
+        rotateMat.toRotateXYZ(rotate, rotate, rotate).dotProduct(tempMat, transformMat);
         glUniformMatrix4fv(transformLocation, 1, true, transformArray.ptr);
     
         glDrawElements(GL_TRIANGLES, cast(GLsizei) indices.length, GL_UNSIGNED_SHORT, cast(const(GLvoid)*) 0);
