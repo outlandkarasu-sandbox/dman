@@ -41,6 +41,7 @@ import bindbc.sdl :
     SDL_Delay,
     SDL_DestroyWindow,
     SDL_Event,
+    SDL_FreeSurface,
     SDL_GetPerformanceCounter,
     SDL_GetPerformanceFrequency,
     SDL_PollEvent,
@@ -58,8 +59,17 @@ import bindbc.opengl :
     GL_FLOAT,
     GL_FRAGMENT_SHADER,
     GL_INFO_LOG_LENGTH,
+    GL_LINEAR,
     GL_LINK_STATUS,
+    GL_REPEAT,
+    GL_RGB,
     GL_STATIC_DRAW,
+    GL_TEXTURE_2D,
+    GL_TEXTURE_MIN_FILTER,
+    GL_TEXTURE_MAG_FILTER,
+    GL_TEXTURE_WRAP_S,
+    GL_TEXTURE_WRAP_T,
+    GL_TEXTURE0,
     GL_TRIANGLES,
     GL_TRUE,
     GL_UNSIGNED_BYTE,
@@ -68,7 +78,9 @@ import bindbc.opengl :
     GL_VERSION,
     GL_VERTEX_SHADER,
     glAttachShader,
+    glActiveTexture,
     glBindBuffer,
+    glBindTexture,
     glBindVertexArray,
     glBufferData,
     GLchar,
@@ -80,6 +92,7 @@ import bindbc.opengl :
     glDeleteBuffers,
     glDeleteProgram,
     glDeleteShader,
+    glDeleteTextures,
     glDeleteVertexArrays,
     glDetachShader,
     glDisableVertexAttribArray,
@@ -92,6 +105,7 @@ import bindbc.opengl :
     GLushort,
     glFlush,
     glGenBuffers,
+    glGenTextures,
     glGenVertexArrays,
     glGetProgramiv,
     glGetProgramInfoLog,
@@ -103,12 +117,24 @@ import bindbc.opengl :
     glLinkProgram,
     glShaderSource,
     GLsizei,
+    glTexImage2D,
+    glTexParameteri,
+    glUniform1i,
     glUniformMatrix4fv,
     glUseProgram,
     GLuint,
     glVertexAttribPointer,
     glViewport,
     GLvoid
+;
+
+import bindbc.sdl.image :
+    IMG_Init,
+    IMG_INIT_PNG,
+    IMG_Load,
+    IMG_Quit,
+    loadSDLImage,
+    sdlImageSupport
 ;
 
 import derelict.assimp3.assimp :
@@ -123,6 +149,7 @@ import derelict.assimp3.assimp :
 
 /// D言語くんモデル
 enum DMAN_MODEL_PATH = "./asset/Dman_2013.fbx";
+enum DMAN_TEXTURE_PATH = "./asset/Dman_tex.png";
 
 /// ウィンドウタイトル
 enum TITLE = "D-man Viewer";
@@ -154,6 +181,12 @@ struct Position {
     GLfloat z;
 }
 
+/// テクスチャ座標の型
+struct TextureCoord {
+    GLfloat u;
+    GLfloat v;
+}
+
 /// 色の型
 struct Color {
     GLubyte r;
@@ -166,6 +199,7 @@ struct Color {
 struct Vertex {
     Position position;
     Color color;
+    TextureCoord textureCoord;
 }
 
 /// メイン処理
@@ -180,6 +214,8 @@ void main() {
     // D言語くん読み込み
     auto scene = aiImportFile(DMAN_MODEL_PATH, aiProcessPreset_TargetRealtime_MaxQuality);
     scope(exit) aiReleaseImport(scene);
+
+    // メッシュ等取得
     auto meshes = scene.mMeshes[0 .. scene.mNumMeshes];
     auto materials = scene.mMaterials[0 .. scene.mNumMaterials];
     auto materialProperties = materials[0].mProperties[0 .. materials[0].mNumProperties];
@@ -187,17 +223,20 @@ void main() {
         writefln("%s", m.mKey.data[0 .. m.mKey.length]);
     }
 
+    // メッシュから頂点情報を取得
     auto mesh = meshes[0];
-    writefln("name: %s, vertices: %s, faces: %s, bones: %s, animMeshes: %s",
-        mesh.mName.data[0 .. mesh.mName.length],
-        mesh.mNumVertices,
-        mesh.mNumFaces,
-        mesh.mNumBones,
-        mesh.mNumAnimMeshes);
-
     auto vertices = mesh.mVertices[0 .. mesh.mNumVertices]
         .map!(v => Vertex(Position(v.x, v.y, v.z), Color(255, 0, 0, 255)))
         .array;
+
+    // テクスチャ座標の設定
+    if(mesh.mTextureCoords[0]) {
+        foreach(i, uv; mesh.mTextureCoords[0][0 .. vertices.length]) {
+            vertices[i].textureCoord = TextureCoord(uv.y, uv.x);
+        }
+    }
+
+    // 面情報の取得
     auto indices = mesh.mFaces[0 .. mesh.mNumFaces]
         .map!(f => f.mIndices[0 .. f.mNumIndices])
         .joiner
@@ -208,9 +247,16 @@ void main() {
     immutable sdlVersion = loadSdl();
     writefln("SDL loaded: %s", sdlVersion);
 
+    // SDL_imageのロード
+    immutable sdlImageVersion = loadSDLImage();
+    writefln("SDL_image loaded: %s", sdlImageVersion);
+
     // 使用するサブシステムの初期化
     enforceSdl(SDL_Init(SDL_INIT_VIDEO));
     scope(exit) SDL_Quit();
+
+    enforceSdl(IMG_Init(IMG_INIT_PNG) == IMG_INIT_PNG);
+    scope(exit) IMG_Quit();
 
     // OpenGLバージョン等設定
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, OPEN_GL_MAJOR_VERSION);
@@ -263,6 +309,23 @@ void main() {
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.length * GLushort.sizeof, indices.ptr, GL_STATIC_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
+    // テクスチャの生成
+    GLuint texture;
+    glGenTextures(1, &texture);
+    scope(exit) glDeleteTextures(1, &texture);
+
+    // テクスチャ読み込み
+    auto textureSurface = enforceSdl(IMG_Load(DMAN_TEXTURE_PATH));
+    scope(exit) SDL_FreeSurface(textureSurface);
+
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureSurface.w, textureSurface.h, 0, GL_RGB, GL_UNSIGNED_BYTE, textureSurface.pixels);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
     // VAOの生成
     GLuint vao;
     glGenVertexArrays(1, &vao);
@@ -275,7 +338,11 @@ void main() {
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, Vertex.sizeof, cast(const(GLvoid)*) Vertex.color.offsetof);
     glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, Vertex.sizeof, cast(const(GLvoid)*) Vertex.textureCoord.offsetof);
+    glEnableVertexAttribArray(2);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
     glBindVertexArray(0);
 
     // 設定済みのバッファを選択解除する。
@@ -283,6 +350,7 @@ void main() {
     glDisableVertexAttribArray(1);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
 
     // uniform変数のlocationを取得しておく。
     immutable transformLocation = glGetUniformLocation(programId, "transform");
@@ -301,6 +369,9 @@ void main() {
     translateMat.toTranslate(0.0f, -0.66f, 0.0f);
     float rotate = 0.0f;
 
+    // テクスチャのuniform変数のlocationを取得しておく。
+    auto textureLocation = glGetUniformLocation(programId, "textureSampler");
+
     /// 描画処理
     void draw() {
         // 画面のクリア
@@ -317,6 +388,10 @@ void main() {
         rotateMat.toRotateXYZ(rotate, rotate, rotate).dotProduct(tempMat, transformMat);
         glUniformMatrix4fv(transformLocation, 1, true, transformArray.ptr);
     
+        // テクスチャ選択
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glUniform1i(textureLocation, 0);
         glDrawElements(GL_TRIANGLES, cast(GLsizei) indices.length, GL_UNSIGNED_SHORT, cast(const(GLvoid)*) 0);
     
         glBindVertexArray(0);
