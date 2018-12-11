@@ -107,6 +107,10 @@ import bindbc.opengl :
     GLvoid
 ;
 
+import derelict.assimp3.assimp :
+    DerelictASSIMP3
+;
+
 /// ウィンドウタイトル
 enum TITLE = "D-man Viewer";
 
@@ -132,6 +136,9 @@ enum FPS = 90;
 
 /// メイン処理
 void main() {
+    // ASSIMPのロード
+    DerelictASSIMP3.load();
+
     // SDLのロード
     immutable sdlVersion = loadSdl();
     writefln("SDL loaded: %s", sdlVersion);
