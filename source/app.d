@@ -118,7 +118,7 @@ import derelict.assimp3.assimp :
 ;
 
 /// D言語くんモデル
-enum DMAN_MODEL_PATH = "./asset/Dman.fbx";
+enum DMAN_MODEL_PATH = "./asset/Dman_2013.fbx";
 
 /// ウィンドウタイトル
 enum TITLE = "D-man Viewer";
@@ -155,6 +155,7 @@ void main() {
     // D言語くん読み込み
     auto scene = aiImportFile(DMAN_MODEL_PATH, aiProcessPreset_TargetRealtime_MaxQuality);
     scope(exit) aiReleaseImport(scene);
+    writefln("%s", scene);
 
     // SDLのロード
     immutable sdlVersion = loadSdl();
