@@ -34,7 +34,9 @@ class SdlException : Exception {
  *  Throws: SdlException 戻り値が0でない場合にスロー
  */
 T enforceSdl(T, string file = __FILE__, ulong line = __LINE__)(T value) {
-    static if(isIntegral!T) {
+    static if(is(T == bool)) {
+        immutable hasError = !value;
+    } else static if(isIntegral!T) {
         immutable hasError = (value != 0);
     } else static if(isPointer!T) {
         immutable hasError = (value is null);
