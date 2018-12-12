@@ -54,6 +54,7 @@ import bindbc.opengl :
     GL_COLOR_BUFFER_BIT,
     GL_COMPILE_STATUS,
     GL_DEPTH_BUFFER_BIT,
+    GL_DEPTH_TEST,
     GL_ELEMENT_ARRAY_BUFFER,
     GL_FALSE,
     GL_FLOAT,
@@ -98,6 +99,7 @@ import bindbc.opengl :
     glDisableVertexAttribArray,
     glDrawArrays,
     glDrawElements,
+    glEnable,
     glEnableVertexAttribArray,
     GLenum,
     GLfloat,
@@ -226,13 +228,13 @@ void main() {
     // メッシュから頂点情報を取得
     auto mesh = meshes[0];
     auto vertices = mesh.mVertices[0 .. mesh.mNumVertices]
-        .map!(v => Vertex(Position(v.x, v.y, v.z), Color(255, 0, 0, 255)))
+        .map!(v => Vertex(Position(-v.x, v.y, v.z), Color(255, 0, 0, 255)))
         .array;
 
     // テクスチャ座標の設定
     if(mesh.mTextureCoords[0]) {
         foreach(i, uv; mesh.mTextureCoords[0][0 .. vertices.length]) {
-            vertices[i].textureCoord = TextureCoord(uv.y, uv.x);
+            vertices[i].textureCoord = TextureCoord(uv.x, 1.0f - uv.y);
         }
     }
 
@@ -286,6 +288,7 @@ void main() {
 
     // ビューポートの設定
     glViewport(0, 0, WINDOW_HEIGHT, WINDOW_WIDTH);
+    glEnable(GL_DEPTH_TEST);
 
     // シェーダーの生成
     immutable programId = createShaderProgram(import("dman.vert"), import("dman.frag"));
@@ -366,7 +369,7 @@ void main() {
     auto transformMat = transformArray.mat4ed;
     auto tempMat = tempArray.mat4ed;
     scaleMat.toScale(0.005f, 0.005f, 0.005f);
-    translateMat.toTranslate(0.0f, -0.66f, 0.0f);
+    translateMat.toTranslate(0.0f, -1.0f, 0.0f);
     float rotate = 0.0f;
 
     // テクスチャのuniform変数のlocationを取得しておく。
@@ -375,7 +378,7 @@ void main() {
     /// 描画処理
     void draw() {
         // 画面のクリア
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // VAO・シェーダーを使用して描画する。
@@ -385,7 +388,7 @@ void main() {
         // 座標変換行列をuniform変数に設定する。
         rotate += 0.01f;
         translateMat.dotProduct(scaleMat, tempMat);
-        rotateMat.toRotateXYZ(rotate, rotate, rotate).dotProduct(tempMat, transformMat);
+        rotateMat.toRotateXYZ(0.0f, rotate, 0.0f).dotProduct(tempMat, transformMat);
         glUniformMatrix4fv(transformLocation, 1, true, transformArray.ptr);
     
         // テクスチャ選択
