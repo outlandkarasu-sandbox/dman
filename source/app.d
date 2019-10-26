@@ -73,6 +73,7 @@ import bindbc.opengl :
     GL_TEXTURE0,
     GL_TRIANGLES,
     GL_TRUE,
+    GL_UNPACK_ALIGNMENT,
     GL_UNSIGNED_BYTE,
     GL_UNSIGNED_INT,
     GL_UNSIGNED_SHORT,
@@ -117,6 +118,7 @@ import bindbc.opengl :
     glGetUniformLocation,
     GLint,
     glLinkProgram,
+    glPixelStorei,
     glShaderSource,
     GLsizei,
     glTexImage2D,
@@ -139,14 +141,14 @@ import bindbc.sdl.image :
     sdlImageSupport
 ;
 
-import derelict.assimp3.assimp :
+import bindbc.assimp :
+    AssimpSupport,
     aiAttachLogStream,
-    aiDefaultLogStream_STDOUT,
+    aiDefaultLogStream,
     aiGetPredefinedLogStream,
-    aiProcessPreset_TargetRealtime_MaxQuality,
+    aiPostProcessStepsPreset,
     aiImportFile,
-    aiReleaseImport,
-    DerelictASSIMP3
+    aiReleaseImport
 ;
 
 /// D言語くんモデル
@@ -206,15 +208,13 @@ struct Vertex {
 
 /// メイン処理
 void main() {
-    // ASSIMPのロード
-    DerelictASSIMP3.load();
 
     // 標準出力にログを出すよう設定
-    auto logStream = aiGetPredefinedLogStream(aiDefaultLogStream_STDOUT, null);
+    auto logStream = aiGetPredefinedLogStream(aiDefaultLogStream.STDOUT, null);
     aiAttachLogStream(&logStream);
 
     // D言語くん読み込み
-    auto scene = aiImportFile(DMAN_MODEL_PATH, aiProcessPreset_TargetRealtime_MaxQuality);
+    auto scene = aiImportFile(DMAN_MODEL_PATH, aiPostProcessStepsPreset.TargetRealtime_MaxQuality);
     scope(exit) aiReleaseImport(scene);
 
     // メッシュ等取得
@@ -294,7 +294,7 @@ void main() {
     immutable programId = createShaderProgram(import("dman.vert"), import("dman.frag"));
     scope(exit) glDeleteProgram(programId);
 
-    // 頂点データの生成
+    // VBOの生成
     GLuint verticesBuffer;
     glGenBuffers(1, &verticesBuffer);
     scope(exit) glDeleteBuffers(1, &verticesBuffer);
@@ -303,7 +303,7 @@ void main() {
     glBufferData(GL_ARRAY_BUFFER, vertices.length * Vertex.sizeof, vertices.ptr, GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    // VBOの生成
+    // IBOの生成
     GLuint elementBuffer;
     glGenBuffers(1, &elementBuffer);
     scope(exit) glDeleteBuffers(1, &elementBuffer);
@@ -320,6 +320,8 @@ void main() {
     // テクスチャ読み込み
     auto textureSurface = enforceSdl(IMG_Load(DMAN_TEXTURE_PATH));
     scope(exit) SDL_FreeSurface(textureSurface);
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
     glBindTexture(GL_TEXTURE_2D, texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -344,8 +346,6 @@ void main() {
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, Vertex.sizeof, cast(const(GLvoid)*) Vertex.textureCoord.offsetof);
     glEnableVertexAttribArray(2);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture);
     glBindVertexArray(0);
 
     // 設定済みのバッファを選択解除する。
@@ -353,7 +353,6 @@ void main() {
     glDisableVertexAttribArray(1);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    glBindTexture(GL_TEXTURE_2D, 0);
 
     // uniform変数のlocationを取得しておく。
     immutable transformLocation = glGetUniformLocation(programId, "transform");

@@ -1,12 +1,13 @@
 {
 	"fileVersion": 1,
 	"versions": {
-		"bindbc-loader": "0.1.1",
-		"bindbc-opengl": "0.3.2",
-		"bindbc-sdl": "0.4.1",
+		"bindbc-assimp": "0.0.1",
+		"bindbc-loader": "0.2.1",
+		"bindbc-opengl": "0.9.0",
+		"bindbc-sdl": "0.13.0",
 		"derelict-assimp3": "2.0.0-beta.1",
 		"derelict-util": "3.0.0-beta.2",
-		"mir-algorithm": "3.1.19",
-		"mir-core": "0.0.12"
+		"mir-algorithm": "3.5.7",
+		"mir-core": "1.0.2"
 	}
 }
